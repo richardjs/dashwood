@@ -1,5 +1,4 @@
-'''
-State representation
+'''State representation
 
 States are an array of 3 uint64s, meaning:
     [0] pieces on board
@@ -21,9 +20,11 @@ Board space numbering:
 
 import numpy as np
 
+from dashwood import bitboards
+
 
 def initial():
-    return np.zeros(3, dtype=np.int64)
+    return np.zeros(3, dtype=np.uint64)
 
 
 def move(state, space, next_piece, in_place=False):
@@ -37,3 +38,11 @@ def move(state, space, next_piece, in_place=False):
     state[2] = next_piece
 
     return state
+
+
+def is_win(state, last_space_moved):
+    if np.bitwise_and(bitboards.wins[last_space_moved], state[0]).any():
+        return True
+    if np.bitwise_and(bitboards.wins[last_space_moved], state[1]).any():
+        return True
+    return False
