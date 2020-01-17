@@ -1,9 +1,10 @@
 '''State representation and operations
 
-States are an array of 3 uint64s, meaning:
+States are an array of 4 uint64s, meaning:
     [0] pieces on board
     [1] inverse of pieces on board
     [2] the next piece to be placed
+    [3] bitboard of pieces used
 
 [1] is not ~[0]. Rather, it is the inverse of the *pieces* on the board.
 The inverse calculation is performed when the piece is ORed onto the
@@ -24,7 +25,9 @@ from dashwood import bitboards
 
 
 def initial():
-    return np.zeros(3, dtype=np.uint64)
+    s = np.zeros(4, dtype=np.uint64)
+    s[3] = np.uint64(1)
+    return s
 
 
 def move(state, space, next_piece):
@@ -33,6 +36,24 @@ def move(state, space, next_piece):
     state[0] |= state[2] << space_offset
     state[1] |= (~state[2] & np.uint64(0b1111)) << space_offset
     state[2] = next_piece
+    state[3] |= np.uint64(1 << next_piece)
+
+
+def children(state):
+    filled_bits = state[0] | state[1]
+    for space in range(16):
+        space_bits = np.uint64(0b1111 << (4*space))
+        if filled_bits & space_bits > 0:
+            continue
+
+        for piece in range(16):
+            piece_bit = np.uint64(1 << piece)
+            if state[3] & piece_bit > 0:
+                continue
+
+            s = state.copy()
+            move(s, space, piece)
+            yield s
 
 
 def is_win(state, last_space_moved):
