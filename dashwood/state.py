@@ -5,6 +5,7 @@ States are an array of 4 uint64s, meaning:
     [1] inverse of pieces on board
     [2] the next piece to be placed
     [3] bitboard of pieces used
+    [4] the last space moved (used for quick win calculations)
 
 [1] is not ~[0]. Rather, it is the inverse of the *pieces* on the board.
 The inverse calculation is performed when the piece is ORed onto the
@@ -25,7 +26,7 @@ from dashwood import bitboards
 
 
 def initial():
-    s = np.zeros(4, dtype=np.uint64)
+    s = np.zeros(5, dtype=np.uint64)
     s[3] = np.uint64(1)
     return s
 
@@ -37,6 +38,7 @@ def move(state, space, next_piece):
     state[1] |= (~state[2] & np.uint64(0b1111)) << space_offset
     state[2] = next_piece
     state[3] |= np.uint64(1 << next_piece)
+    state[4] = space
 
 
 def children(state):
@@ -56,9 +58,12 @@ def children(state):
             yield s
 
 
-def is_win(state, last_space_moved):
-    if np.bitwise_and(bitboards.wins[last_space_moved], state[0]).any():
-        return True
-    if np.bitwise_and(bitboards.wins[last_space_moved], state[1]).any():
-        return True
+def is_win(s):
+    last_space_moved = s[4]
+    for i, t in enumerate(np.bitwise_and(bitboards.wins[last_space_moved], s[0])):
+        if t == bitboards.wins[last_space_moved][i]:
+            return True
+    for i, t in enumerate(np.bitwise_and(bitboards.wins[last_space_moved], s[1])):
+        if t == bitboards.wins[last_space_moved][i]:
+            return True
     return False
