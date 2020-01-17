@@ -1,4 +1,4 @@
-'''State representation
+'''State representation and operations
 
 States are an array of 3 uint64s, meaning:
     [0] pieces on board
@@ -27,17 +27,12 @@ def initial():
     return np.zeros(3, dtype=np.uint64)
 
 
-def move(state, space, next_piece, in_place=False):
-    if not in_place:
-        state = state.copy()
-
-    space_offset = space*4
+def move(state, space, next_piece):
+    '''Apply a move to a state in place. Does not check for validity.'''
+    space_offset = np.uint64(space*4)
     state[0] |= state[2] << space_offset
-    state[1] |= (~state[2] & 0b1111) << space_offset
-
+    state[1] |= (~state[2] & np.uint64(0b1111)) << space_offset
     state[2] = next_piece
-
-    return state
 
 
 def is_win(state, last_space_moved):
