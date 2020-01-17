@@ -1,5 +1,6 @@
 from sys import stdout
 
+
 # PIECE_STRINGS[16] is the string for empty space
 PIECE_STRINGS = [
     'abcd',
@@ -35,3 +36,5 @@ def print_state(state):
             stdout.write(f'{PIECE_STRINGS[piece]} ')
         else:
             stdout.write(f'{PIECE_STRINGS[piece]}\n')
+
+    stdout.write(f'\nNext: {PIECE_STRINGS[state[2]]}\n')
