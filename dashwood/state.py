@@ -27,30 +27,30 @@ from dashwood import bitboards
 
 def initial():
     s = np.zeros(5, dtype=np.uint64)
-    s[3] = np.uint64(1)
+    s[3] = 1
     return s
 
 
 def move(state, space, next_piece):
     '''Apply a move to a state in place. Does not check for validity.'''
-    space_offset = np.uint64(space*4)
-    state[0] |= state[2] << space_offset
-    state[1] |= (~state[2] & np.uint64(0b1111)) << space_offset
+    space_offset = space*4
+    state[0] = int(state[0]) | (int(state[2]) << space_offset)
+    state[1] = int(state[1]) | ((int(~state[2]) & 0b1111) << space_offset)
     state[2] = next_piece
-    state[3] |= np.uint64(1 << next_piece)
+    state[3] = int(state[3]) | (1 << next_piece)
     state[4] = space
 
 
 def children(state):
-    filled_bits = state[0] | state[1]
+    filled_bits = int(state[0] | state[1])
     for space in range(16):
-        space_bits = np.uint64(0b1111 << (4*space))
+        space_bits = 0b1111 << (4*space)
         if filled_bits & space_bits > 0:
             continue
 
         for piece in range(16):
-            piece_bit = np.uint64(1 << piece)
-            if state[3] & piece_bit > 0:
+            piece_bit = 1 << piece
+            if int(state[3]) & piece_bit > 0:
                 continue
 
             s = state.copy()
