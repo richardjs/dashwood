@@ -1,3 +1,5 @@
+from random import choice
+
 import numpy as np
 
 from dashwood import state
@@ -18,3 +20,29 @@ def minimax(s, depth):
             break
 
     return best_v
+
+
+def montecarlo(s, iterations):
+    score = 0
+    for _ in range(iterations):
+        t = s.copy()
+        player_turn = True
+        draw = False
+
+        d = 0
+        while not state.is_win(t):
+            children = list(state.children(t))
+            if not children:
+                draw = True
+                break
+
+            t = choice(list(state.children(t)))
+            player_turn = not player_turn
+
+        if not draw:
+            if player_turn:
+                score += 1
+            else:
+                score -= 1
+
+    return score/iterations
