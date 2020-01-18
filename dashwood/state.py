@@ -60,10 +60,8 @@ def children(state):
 
 def is_win(s):
     last_space_moved = s[4]
-    for i, t in enumerate(np.bitwise_and(bitboards.wins[last_space_moved], s[0])):
-        if t == bitboards.wins[last_space_moved][i]:
-            return True
-    for i, t in enumerate(np.bitwise_and(bitboards.wins[last_space_moved], s[1])):
-        if t == bitboards.wins[last_space_moved][i]:
-            return True
+    if (np.bitwise_and(bitboards.wins[last_space_moved], s[0]) == bitboards.wins[last_space_moved]).any():
+        return True
+    if (np.bitwise_and(bitboards.wins[last_space_moved], s[1]) == bitboards.wins[last_space_moved]).any():
+        return True
     return False
