@@ -31,12 +31,13 @@ def montecarlo(s, iterations):
 
         d = 0
         while not state.is_win(t):
-            children = list(state.children(t))
+            children = list(state.children(t, make_moves=False))
             if not children:
                 draw = True
                 break
 
-            t = choice(list(state.children(t)))
+            space, piece = choice(children)
+            state.move(t, space, piece)
             player_turn = not player_turn
 
         if not draw:
