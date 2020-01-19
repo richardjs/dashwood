@@ -35,3 +35,5 @@ def _gen_wins():
 
 
 wins = _gen_wins()
+
+spaces = np.fromfunction(lambda x: 0b1111 << (4*x), (16,), dtype=np.uint64)

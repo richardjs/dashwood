@@ -42,10 +42,10 @@ def move(state, space, next_piece):
 
 
 def children(state):
-    filled_bits = int(state[0] | state[1])
-    for space in range(16):
-        space_bits = 0b1111 << (4*space)
-        if filled_bits & space_bits > 0:
+    filled_bits = state[0] | state[1]
+    space = 0
+    for filled in np.bitwise_and(bitboards.spaces, filled_bits):
+        if filled:
             continue
 
         for piece in range(16):
@@ -56,6 +56,8 @@ def children(state):
             s = state.copy()
             move(s, space, piece)
             yield s
+
+        space += 1
 
 
 def is_win(s):
