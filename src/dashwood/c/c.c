@@ -1,15 +1,16 @@
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 
 
 #define MAX_ACTIONS 240
 
 
-uint64_t WIN_BOARDS[16][8];
+static uint64_t WIN_BOARDS[16][8];
 
 
-void initBitboards() {
+static void initBitboards() {
     for (int space = 0; space < 16; space++) {
         for (int attribute = 0; attribute < 4; attribute++) {
             uint64_t attributeBits = 1 << attribute;
@@ -32,7 +33,7 @@ void initBitboards() {
 }
 
 
-struct State {
+static struct State {
     uint64_t	board;
     uint64_t	iboard;
     uint8_t	nextPiece;
@@ -41,13 +42,13 @@ struct State {
 };
 
 
-struct Action {
+static struct Action {
     uint8_t space;
     uint8_t piece;
 };
 
 
-void State_init(struct State *state) {
+static void State_initial(struct State *state) {
     state->board = 0;
     state->iboard = 0;
     state->nextPiece = 0;
@@ -56,7 +57,7 @@ void State_init(struct State *state) {
 }
 
 
-void State_move(struct State *state, const struct Action *action) {
+static void State_move(struct State *state, const struct Action *action) {
     uint8_t spaceOffset = action->space * 4;
     state->board |= (uint64_t)state->nextPiece << spaceOffset;
     state->iboard |= (uint64_t)(~state->nextPiece & 0b1111) << spaceOffset;
@@ -66,7 +67,7 @@ void State_move(struct State *state, const struct Action *action) {
 }
 
 
-int State_actions(const struct State *state, struct Action actions[]){
+static int State_actions(const struct State *state, struct Action actions[]){
     uint64_t filledBits = state->board | state->iboard;
 
     int count = 0;
@@ -87,7 +88,7 @@ int State_actions(const struct State *state, struct Action actions[]){
 }
 
 
-bool State_isWin(const struct State *state) {
+static bool State_isWin(const struct State *state) {
     for (int i = 0; i < 8; i++) {
         if ((WIN_BOARDS[state->lastSpace][i] & state->board) == WIN_BOARDS[state->lastSpace][i]) {
             return true;
@@ -100,7 +101,38 @@ bool State_isWin(const struct State *state) {
 }
 
 
-double negamax(const struct State *state, int depth){
+/* Build a complete State from only what we technically need. */
+static void State_from(struct State *state,
+	uint64_t board, uint64_t iboard, uint8_t nextPiece) {
+    state->board = board;
+    state->iboard = iboard;
+    state->nextPiece = nextPiece;
+
+    for (uint64_t piece = 0; piece < 16; piece++) {
+	for (int space = 0; space < 16; space++) {
+	    if ((state->board & (piece << (4*space))) == state->board) {
+		state->usedPieces |= 1 << piece;
+	    }
+	}
+    }
+
+    // If there's a win on the board, we'll one of its spaces was the
+    // last move. If not, it doesn't really matter, so we'll just
+    // arbitrarily set lastSpace to a filled space.
+    uint64_t filledBits = state->board | state->iboard;
+    for (int space = 0; space < 16; space++) {
+	if ((filledBits >> space) & 0b1111 == 0){
+	    continue;
+	}
+	state->lastSpace = space;
+	if (State_isWin(&state)) {
+	    break;
+	}
+    }
+}
+
+
+static double negamax(const struct State *state, int depth){
     if (State_isWin(state)) {
         return -1.0;
     }
@@ -123,12 +155,38 @@ double negamax(const struct State *state, int depth){
 }
 
 
-int main() {
-    initBitboards();
+static PyObject *c_minimax(PyObject *self, PyObject *args) {
+    uint64_t board, iboard;
+    uint8_t nextPiece;
+    int depth;
+    if (!PyArg_ParseTuple(args, "(kkb)i", &board, &iboard, &nextPiece, &depth)) {
+	return NULL;
+    }
 
     struct State state;
-    State_init(&state);
-    printf("%f\n", negamax(&state, 3));
+    State_from(&state, board, iboard, nextPiece);
 
-    return 0;
+    double score = negamax(&state, depth);
+    return PyFloat_FromDouble(score);
+}
+
+
+static PyMethodDef CMethods[] = {
+    {"minimax", c_minimax, METH_VARARGS, "Score a state with minimax."},
+    {NULL, NULL, 0, NULL}
+};
+
+
+static struct PyModuleDef cmodule = {
+    PyModuleDef_HEAD_INIT,
+    "c",
+    NULL,
+    -1,
+    CMethods
+};
+
+
+PyMODINIT_FUNC PyInit_c(void) {
+    initBitboards();
+    return PyModule_Create(&cmodule);
 }
