@@ -109,13 +109,14 @@ static void State_from(struct State *state,
     state->nextPiece = nextPiece;
 
     state->usedPieces = 1 << nextPiece;
-    for (uint64_t piece = 1; piece < 16; piece++) {
-	for (int space = 0; space < 16; space++) {
-	    if ((((state->board >> (4*space)) & 0b1111) & piece) > 0) {
-		state->usedPieces |= 1 << piece;
-	    }
-	    if ((((state->iboard >> (4*space)) & 0b1111) & piece) > 0) {
-		state->usedPieces |= 1 << piece;
+    for (int space = 0; space < 16; space++) {
+	int piece = (board >> (4*space)) & 0b1111;
+	if (piece) {
+	    state->usedPieces |= 1 << piece;
+	} else {
+	    int ipiece = (iboard >> (4*space)) & 0b1111;
+	    if (ipiece == 0b1111) {
+		state->usedPieces |= 1;
 	    }
 	}
     }
