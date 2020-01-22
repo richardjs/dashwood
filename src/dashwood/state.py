@@ -1,11 +1,9 @@
 '''State representation and operations
 
-States are an array of 4 uint64s, meaning:
+The most basic state representation is a 3-tuple, defined as:
     [0] pieces on board
     [1] inverse of pieces on board
     [2] the next piece to be placed
-    [3] bitboard of pieces used
-    [4] the last space moved (used for quick win calculations)
 
 [1] is not ~[0]. Rather, it is the inverse of the *pieces* on the board.
 The inverse calculation is performed when the piece is ORed onto the
@@ -20,53 +18,66 @@ Board space numbering:
 '''
 
 
-import numpy as np
-
 from dashwood import bitboards
+from dashwood.c import minimax
 
 
-def initial():
-    s = np.zeros(5, dtype=np.uint64)
-    s[3] = 1
-    return s
+class State():
+    def __init__(self, state_tuple=(0, 0, 0)):
+        board, iboard, next_piece = state_tuple
+        self.board = board
+        self.iboard = iboard
+        self.next_piece = next_piece
 
+        self.pieces_left = set(range(16))
+        self.pieces_left.remove(next_piece)
+        for space in range(16):
+            piece = (board >> (space*4)) & 0b1111
+            if piece:
+                self.pieces_left.remove(piece)
+            else:
+                ipiece = (iboard >> (space*4)) & 0b1111
+                if piece == 0b1111:
+                    self.pieces_left.remove(0)
 
-def move(state, space, next_piece):
-    '''Apply a move to a state in place. Does not check for validity.'''
-    space_offset = space*4
-    state[0] = int(state[0]) | (int(state[2]) << space_offset)
-    state[1] = int(state[1]) | ((int(~state[2]) & 0b1111) << space_offset)
-    state[2] = next_piece
-    state[3] = int(state[3]) | (1 << next_piece)
-    state[4] = space
+    @property
+    def tuple(self):
+        return (self.board, self.iboard, self.next_piece)
 
-
-def children(state, make_moves=True):
-    filled_bits = state[0] | state[1]
-    space = 0
-    for filled in np.bitwise_and(bitboards.spaces, filled_bits):
-        if filled:
-            continue
-
-        for piece in range(16):
-            piece_bit = 1 << piece
-            if int(state[3]) & piece_bit > 0:
+    @property
+    def actions(self):
+        filled_bits = self.board | self.iboard
+        for space in range(16):
+            space_bits = 0b1111 << (4*space)
+            if filled_bits & space_bits:
                 continue
 
-            if make_moves:
-                s = state.copy()
-                move(s, space, piece)
-                yield s
-            else:
-                yield space, piece
+            for next_piece in self.pieces_left:
+                yield (space, next_piece)
 
-        space += 1
+    @property
+    def is_win(self):
+        for space in range(16):
+            for winboard in bitboards.wins[space]:
+                if (self.board & winboard) == winboard:
+                    return True
+                if (self.iboard & winboard) == winboard:
+                    return True
 
+        return False
 
-def is_win(s):
-    last_space_moved = s[4]
-    if (np.bitwise_and(bitboards.wins[last_space_moved], s[0]) == bitboards.wins[last_space_moved]).any():
-        return True
-    if (np.bitwise_and(bitboards.wins[last_space_moved], s[1]) == bitboards.wins[last_space_moved]).any():
-        return True
-    return False
+    def minimax(self, depth):
+        return minimax(self.tuple, depth)
+
+    def move(self, action):
+        space, next_piece = action
+        self.board |= (self.next_piece << (4*space))
+        self.iboard |= ((~self.next_piece & 0b1111) << (4*space))
+        self.next_piece = next_piece
+        self.pieces_left.remove(next_piece)
+
+    def __str__(self):
+        return ' '.join([bin(self.board), bin(self.iboard), bin(self.next_piece)])
+
+    def __repr__(self):
+        return self.__str__()
