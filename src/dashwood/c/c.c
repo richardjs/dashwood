@@ -108,17 +108,22 @@ static void State_from(struct State *state,
     state->iboard = iboard;
     state->nextPiece = nextPiece;
 
-    for (uint64_t piece = 0; piece < 16; piece++) {
+    state->usedPieces = 1 << nextPiece;
+    for (uint64_t piece = 1; piece < 16; piece++) {
 	for (int space = 0; space < 16; space++) {
-	    if ((state->board & (piece << (4*space))) == state->board) {
+	    if ((((state->board >> (4*space)) & 0b1111) & piece) > 0) {
+		state->usedPieces |= 1 << piece;
+	    }
+	    if ((((state->iboard >> (4*space)) & 0b1111) & piece) > 0) {
 		state->usedPieces |= 1 << piece;
 	    }
 	}
     }
 
-    // If there's a win on the board, we'll one of its spaces was the
-    // last move. If not, it doesn't really matter, so we'll just
+    // If there's a win on the board, we'll assume one of its spaces was
+    // the last move. If not, it doesn't really matter, so we'll just
     // arbitrarily set lastSpace to a filled space.
+    state->lastSpace = 0;
     uint64_t filledBits = state->board | state->iboard;
     for (int space = 0; space < 16; space++) {
 	if ((filledBits >> space) & 0b1111 == 0){
@@ -129,6 +134,17 @@ static void State_from(struct State *state,
 	    break;
 	}
     }
+}
+
+
+static void State_print(const struct State *state) {
+    fprintf(stderr, "---\n");
+    fprintf(stderr, "board:\t\t%d\t%x\n", state->board, state->board);
+    fprintf(stderr, "iboard:\t\t%d\t%x\n", state->iboard, state->iboard);
+    fprintf(stderr, "nextPiece:\t%d\t%x\n", state->nextPiece, state->nextPiece);
+    fprintf(stderr, "usedPieces:\t%d\t%x\n", state->usedPieces, state->usedPieces);
+    fprintf(stderr, "lastSpace:\t%d\t%x\n", state->lastSpace, state->lastSpace);
+    fprintf(stderr, "---\n");
 }
 
 
