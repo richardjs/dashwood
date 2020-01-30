@@ -29,6 +29,18 @@ class StateTests(unittest.TestCase):
         s.move((2, 4))
         self.assertEqual(s.minimax(1), 1.0)
 
+    def test_move_no(self):
+        s = State()
+        self.assertEqual(s.move_no, 0)
+        s.move((0, 1))
+        self.assertEqual(s.move_no, 1)
+        s = State(s.tuple)
+        self.assertEqual(s.move_no, 1)
+        s.move((1, 4))
+        self.assertEqual(s.move_no, 2)
+        s = State(s.tuple)
+        self.assertEqual(s.move_no, 2)
+
 
 if __name__ == '__main__':
     unittest.main()

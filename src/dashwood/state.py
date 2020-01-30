@@ -33,16 +33,22 @@ class State():
         self.iboard = iboard
         self.next_piece = next_piece
 
+        self.move_no = 0
+        if self.next_piece != 0:
+            self.move_no += 1
+
         self.pieces_left = set(range(16))
         self.pieces_left.remove(next_piece)
         for space in range(16):
             piece = (board >> (space*4)) & 0b1111
             if piece:
                 self.pieces_left.remove(piece)
+                self.move_no += 1
             else:
                 ipiece = (iboard >> (space*4)) & 0b1111
                 if piece == 0b1111:
                     self.pieces_left.remove(0)
+                    self.move_no += 1
 
     @property
     def tuple(self):
@@ -79,6 +85,7 @@ class State():
         self.iboard |= ((~self.next_piece & 0b1111) << (4*space))
         self.next_piece = next_piece
         self.pieces_left.remove(next_piece)
+        self.move_no += 1
 
     def minimax(self, depth, concurrent=True):
         if self.is_win:
