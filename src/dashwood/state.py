@@ -18,6 +18,10 @@ Board space numbering:
 '''
 
 
+import math
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from copy import deepcopy
+
 from dashwood import bitboards
 from dashwood.c import minimax
 
@@ -66,8 +70,8 @@ class State():
 
         return False
 
-    def minimax(self, depth):
-        return minimax(self.tuple, depth)
+    def copy(self):
+        return deepcopy(self)
 
     def move(self, action):
         space, next_piece = action
@@ -75,6 +79,30 @@ class State():
         self.iboard |= ((~self.next_piece & 0b1111) << (4*space))
         self.next_piece = next_piece
         self.pieces_left.remove(next_piece)
+
+    def minimax(self, depth, concurrent=True):
+        if self.is_win:
+            return -1.0
+        if depth == 0:
+            return 0.0
+
+        if not concurrent:
+            return minimax(self.tuple, depth)
+
+        pool = ProcessPoolExecutor()
+        futures = []
+        for action in self.actions:
+            child = self.copy()
+            child.move(action)
+
+            futures.append(pool.submit(
+                child.minimax, depth-1, concurrent=False))
+
+        best_score = -math.inf
+        for future in futures:
+            best_score = max(best_score, -future.result())
+
+        return best_score
 
     def __str__(self):
         return ' '.join([bin(self.board), bin(self.iboard), bin(self.next_piece)])
